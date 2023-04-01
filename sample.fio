@@ -1,0 +1,11 @@
+[global]
+[sync]
+ioengine=posixaio
+rw=write
+direct=1
+gtod_reduce=1
+size=1g
+numjobs=1
+iodepth=1
+time_based
+end_fsync=1

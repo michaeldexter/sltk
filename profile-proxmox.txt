@@ -1,0 +1,6 @@
+# They ONLY enable "compression"
+#zpool_properties="-o feature@lz4_compress=enabled -O compression=lz4"
+zpool_properties="-O compression=on"
+
+# This will produce:
+# zpool create -O compression=on -f tank /dev/device

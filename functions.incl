@@ -1,0 +1,233 @@
+#!/bin/sh
+#-
+# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+#
+# Copyright 2023 Michael Dexter
+# All rights reserved
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted providing that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#	notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#	notice, this list of conditions and the following disclaimer in the
+#	documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+# IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+# DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+# OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
+# Version v0.1
+
+# User uses $f_operation $f_device $f_mode ( label|raw|char )
+
+f_operation_device_mode() {
+# Takes in "$1" operation "$2" device and "$3" mode label|raw|char
+
+case "$( uname -s )" in
+		FreeBSD)
+			device="$( basename "$2" )"
+			case "$3" in
+				label)
+					device_path="/dev/gpt/$device"
+				;;
+				raw)
+					device_path="/dev/$device"
+				;;
+				char)
+					echo "${1}: Device mode char not supported on FreeBSD"
+					exit 1
+				;;
+				*)
+					echo "Invalid input to $1 < device > < mode >"
+					exit 1
+				;;
+			esac
+
+			[ -e "$device_path" ] || { echo "${1}: Device $device_path not found" ; exit 1 ; }
+
+			case "$1" in
+				f_template)
+					echo "Hello from the template and here is $device_path"
+				;;
+				f_dev_path)
+					dirname "$device_path"
+				;;
+				f_dev_check)
+					test -e "$device_path"
+					return $?
+				;;
+				f_part_check)
+					gpart show "$device_path" > /dev/null 2>&1
+					return $?
+				;;
+				f_block_size)
+					# DOES NOT WORK
+					#stat -f %k "$device_path"
+					diskinfo "$device_path" | cut -f2
+				;;
+				f_part)
+#					freebsd-swap = -t !516e7cb5-6ecf-11d6-8ff8-00022d09712b
+#					freebsd-zfs = -t !516e7cba-6ecf-11d6-8ff8-00022d09712b
+					# ASSUMING LABEL PARTITIONING FOR NOW
+
+			# Least terrible? This will print the rigt half of a disk with a tab in its serial number
+			
+			serial=$( diskinfo -v "$device_path" | grep ident | cut -d "#" -f 1 | awk '{print $NF}' )
+
+					gpart create -s gpt "$device_path" || \
+						{ echo "Device $device_path failed to partition" ; exit 1 ; }
+
+					if [ "$4" ] ; then
+						# Have a better test if numeric?
+						# Validate if a round number?
+						n=$(( $4 + 1 )) || { echo "${1}: Invalid swap value $4" ; exit 1 ; }
+						gpart add -a 4k -b 128 -t freebsd-swap -s ${4}G "$device_path" || \
+							{ echo "$device_path failed to partition" ; exit 1 ; }
+						gpart add -a 4k -l "$serial" -t freebsd-zfs "$device_path"
+					else
+						gpart add -a 4k -b 128 -l "$serial" -t freebsd-zfs "$device_path"
+					fi
+				;;
+				f_boot)
+					[ -f /boot/pmbr-datadisk ] || { echo "/boot/pmbr-datadisk not found" ; exit 1 ; }
+					gpart bootcode -b /boot/pmbr-datadisk "$device_path" || \
+						{ echo "/boot/pmbr-datadisk failed to install" ; exit 1 ; }
+				;;
+				f_depart)
+					gpart recover "$device_path" > /dev/null 2>&1
+#			for partition_id in $(gpart backup "$device_path" | sed -e '1d' | awk '{print $1}' ); do
+#						gpart delete -i $partition_id "$device_path" > /dev/null 2>&1 || \
+#							{ echo Partition $partitions_id deletion failed ; exit 1 ; }
+#					done
+					zpool labelclear -f "$device_path" > /dev/null 2>&1 #|| \
+#						{ echo "$device_path" zpool labelclear failed ; exit 1 ; }
+					gpart destroy -F "$device_path" || \
+						{ echo "$device_path" failed to destroy partitions ; exit 1 ; }
+				;;
+			esac
+		;;
+		SunOS)
+			device="$( basename "$2" )"
+			case "$3" in
+				label)
+					echo "${1}: Device mode label not supported on illumos"
+					exit 1
+				;;
+				raw)
+					device_path="/dev/dsk/$device"
+				;;
+				char)
+					device_path="/dev/rdsk/$device"
+				;;
+				*)
+					echo "Invalid input to $1 < device > < mode >"
+					exit 1
+				;;
+			esac
+
+			[ -e "$device_path" ] || { echo "${1}: Device $device_path not found" ; exit 1 ; }
+
+			case "$1" in
+				f_template)
+					echo "Hello from the template and here is $device_path"
+				;;
+				f_dev_path)
+# VERIFY THIS
+					dirname "$device_path"
+				;;
+				f_dev_check)
+					#test -e "$device_path"
+					test -L "$device_path"
+					return $?
+				;;
+				f_part_check)
+					prtvtoc "$device_path" > /dev/null 2>&1
+					return $?
+				;;
+				f_block_size)
+					stat -c %B "$device_path"
+				;;
+			esac
+		;;
+		Linux)
+			device="$( basename "$2" )"
+			case "$3" in
+				label)
+					device_path="/dev/disk/by-label/$device"
+				;;
+				raw)
+					device_path="/dev/$device"
+				;;
+				char)
+					echo "${1}: Device mode char not supported on Linux"
+					exit 1
+				;;
+				*)
+					echo "Invalid input to $1 < device > < mode >"
+					exit 1
+				;;
+			esac
+
+			[ -e "$device_path" ] || { echo "${1}: Device $device_path not found" ; exit 1 ; }
+
+			case "$1" in
+				f_template)
+					echo "Hello from the template and here is $device_path"
+				;;
+				f_dev_path)
+					dirname "$device_path"
+				;;
+				f_dev_check)
+					test -e "$device_path"
+					return $?
+				;;
+				f_part_check)
+					disk -l "$device_path" > /dev/null 2>&1
+					return $?
+				;;
+				f_block_size)
+					stat -c %B "$device_path"
+				;;
+				f_part)
+					echo NO-OP
+				;;
+				f_boot)
+					echo NO-OP
+				;;
+				f_depart)
+# wipefs is on both SCALE and Proxmox
+					zpool labelclear -f "$device_path" > /dev/null 2>&1 #|| \
+#						{ echo "$device_path" zpool labelclear failed ; exit 1 ; }
+					wipefs -a "$device_path" > /dev/null 2>&1 || \
+						{ echo Disk $device_path deletion failed ; exit 1 ; }
+				;;	
+			esac
+		;;
+		*)
+			echo "${1}: Unrecognized OS $platform"
+			exit 1
+		;;
+	esac
+} # End f_operation_device_mode()
+
+
+# USER-FACING FUNCTIONS (Keep in sync)
+# Note the shift that these become $1 $2 $3 $4...
+f_template() ( f_operation_device_mode f_template $1 $2 )
+f_dev_path() ( f_operation_device_mode f_dev_path $1 $2 )
+f_dev_check() ( f_operation_device_mode f_dev_check $1 $2 )
+f_part_check() ( f_operation_device_mode f_part_check $1 $2 )
+f_block_size() ( f_operation_device_mode f_block_size $1 $2 )
+f_depart() ( f_operation_device_mode f_depart $1 $2 )
+f_part() ( f_operation_device_mode f_part $1 $2 $3 )
+f_boot() ( f_operation_device_mode f_boot $1 $2 )

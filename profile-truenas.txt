@@ -1,0 +1,15 @@
+# TrueNAS CORE and SCALE properties as of August, 2022
+#zpool_properties="-o feature@lz4_compress=enabled -o altroot=/mnt -o cachefile=/data/zfs/zpool.cache -o failmode=continue -o autoexpand=on -o ashift=12 -o feature@async_destroy=enabled -o feature@empty_bpobj=enabled -o feature@multi_vdev_crash_dump=enabled -o feature@spacemap_histogram=enabled -o feature@enabled_txg=enabled -o feature@hole_birth=enabled -o feature@extensible_dataset=enabled -o feature@embedded_data=enabled -o feature@bookmarks=enabled -o feature@filesystem_limits=enabled -o feature@large_blocks=enabled -o feature@large_dnode=enabled -o feature@sha512=enabled -o feature@skein=enabled -o feature@userobj_accounting=enabled -o feature@encryption=enabled -o feature@project_quota=enabled -o feature@device_removal=enabled -o feature@obsolete_counts=enabled -o feature@zpool_checkpoint=enabled -o feature@spacemap_v2=enabled -o feature@allocation_classes=enabled -o feature@resilver_defer=enabled -o feature@bookmark_v2=enabled -o feature@redaction_bookmarks=enabled -o feature@redacted_datasets=enabled -o feature@bookmark_written=enabled -o feature@log_spacemap=enabled -o feature@livelist=enabled -o feature@device_rebuild=enabled -o feature@zstd_compress=enabled -o feature@draid=enabled -O atime=off -O compression=lz4 -O aclinherit=passthrough -O mountpoint=/$zpool_name -O aclmode=passthrough"
+
+# Changes from the TrueNAS default properties to accomodate illumos
+# Removed: -o altroot=/mnt
+# Removed: -o cachefile=/data/zfs/zpool.cache
+# Removed: -o feature@draid=enabled
+# Removed: -o feature@bookmark_written=enabled
+# Removed: -o feature@redaction_bookmarks=enabled -o feature@redacted_datasets=enabled
+# Removed: -o feature@livelist=enabled
+# Removed: -o feature@device_rebuild=enabled
+# Removed: -o -o feature@zstd_compress=enabled
+# Also set on TrueNAS -O mountpoint=/mnt/$zpool_name
+
+zpool_properties="-o feature@lz4_compress=enabled -o failmode=continue -o autoexpand=on -o ashift=12 -o feature@async_destroy=enabled -o feature@empty_bpobj=enabled -o feature@multi_vdev_crash_dump=enabled -o feature@spacemap_histogram=enabled -o feature@enabled_txg=enabled -o feature@hole_birth=enabled -o feature@extensible_dataset=enabled -o feature@embedded_data=enabled -o feature@bookmarks=enabled -o feature@filesystem_limits=enabled -o feature@large_blocks=enabled -o feature@large_dnode=enabled -o feature@sha512=enabled -o feature@skein=enabled -o feature@userobj_accounting=enabled -o feature@encryption=enabled -o feature@project_quota=enabled -o feature@device_removal=enabled -o feature@obsolete_counts=enabled -o feature@zpool_checkpoint=enabled -o feature@spacemap_v2=enabled -o feature@allocation_classes=enabled -o feature@resilver_defer=enabled -o feature@bookmark_v2=enabled -o feature@log_spacemap=enabled -O atime=off -O compression=lz4 -O aclinherit=passthrough -O mountpoint=/$zpool_name -O aclmode=passthrough"
