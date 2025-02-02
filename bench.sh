@@ -2,7 +2,7 @@
 #-
 # SPDX-License-Identifier: BSD-2-Clause-FreeBSD
 #
-# Copyright 2023 Michael Dexter
+# Copyright 2023, 2025 Michael Dexter
 # All rights reserved
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,7 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-# Version v0.1
+# Version v0.2
 
 f_usage() {
 	echo "USAGE:"
@@ -38,9 +38,9 @@ f_usage() {
 }
 
 # Abort early if there is no chance of success
-which fio > /dev/null 2>&1 || { echo fio not found ; exit 1 ; }
-which jq > /dev/null 2>&1 || { echo jq not found ; exit 1 ; }
-which uuidgen > /dev/null 2>&1 || { echo uuidgen not found ; exit 1 ; }
+which fio > /dev/null 2>&1 || { echo benchmarks/fio not installed ; exit 1 ; }
+which jq > /dev/null 2>&1 || { echo textproc/jq not installed ; exit 1 ; }
+which uuidgen > /dev/null 2>&1 || { echo uuidgen not installed ; exit 1 ; }
 
 # Internal variables
 # Directory for JSON output. Could it be absorbed into shell variables?
@@ -118,7 +118,19 @@ fi
 # Defaults that can be overridden by user input and can be customized here
 run_time="10"
 
-default_fio_string="--name=bench.sh --ioengine=posixaio --direct=1 --fdatasync=1 --rw=write --gtod_reduce=1 --size=1g --numjobs=1 --iodepth=1 --time_based --end_fsync=1"
+# posixaio engine is failing in 2025 on FreeBSD 14.2
+#fio: pid=4254, err=45/file:engines/posixaio.c:180, func=xfer, error=Operation not supported
+
+# fio 3.38 engine support on FreeBSD 14.2
+# sync
+# psync
+# vsync
+# pvsync
+# pvsync2
+
+#default_fio_string="--name=bench.sh --ioengine=posixaio --direct=1 --fdatasync=1 --rw=write --gtod_reduce=1 --size=1g --numjobs=1 --iodepth=1 --time_based --end_fsync=1"
+
+default_fio_string="--name=bench.sh --ioengine=sync --direct=1 --fdatasync=1 --rw=write --gtod_reduce=1 --size=1g --numjobs=1 --iodepth=1 --time_based --end_fsync=1"
 
 # Works on tmpfs
 # fio --runtime=10 --name=tmpfs --ioengine=posixaio --fdatasync=1 --rw=write --gtod_reduce=1 --size=1g --numjobs=1 --iodepth=1 --time_based --end_fsync=1 --filename="$1"
