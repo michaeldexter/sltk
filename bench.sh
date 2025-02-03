@@ -26,7 +26,7 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-# Version v0.2
+# Version v0.2.1
 
 f_usage() {
 	echo "USAGE:"
@@ -47,6 +47,8 @@ which uuidgen > /dev/null 2>&1 || { echo uuidgen not installed ; exit 1 ; }
 output_dir="/tmp/$( uuidgen )"
 mkdir -p $output_dir || { echo Failed to create /tmp/$output_dir ; exit 1 ; }
 
+# Defaults that can be overridden by user input and can be customized here
+run_time="10"
 
 # BASH on Linux requires ./<file>
 if [ -r ./functions.incl ] ; then
@@ -95,8 +97,9 @@ while getopts p:d:t:c:m:P:r:f: opts ; do
 	;;
 	r)
 		[ -n "${OPTARG}" ] || f_usage
-		# Check if numeric
 		run_time="${OPTARG}"
+		[ "$run_time" -gt 0 ] > /dev/null 2>&1 || \
+			{ echo "Invalid runtime input" ; exit 1 ; }
 	;;
 	f)
 		# -r handles both but they are different issues
@@ -115,9 +118,6 @@ if [ -n "$device_string" ] ; then
 	[ -n "$device_mode" ] || { echo "-d requires -m" ; exit 1 ; }
 fi
 
-# Defaults that can be overridden by user input and can be customized here
-run_time="10"
-
 # posixaio engine is failing in 2025 on FreeBSD 14.2
 #fio: pid=4254, err=45/file:engines/posixaio.c:180, func=xfer, error=Operation not supported
 
@@ -130,7 +130,7 @@ run_time="10"
 
 #default_fio_string="--name=bench.sh --ioengine=posixaio --direct=1 --fdatasync=1 --rw=write --gtod_reduce=1 --size=1g --numjobs=1 --iodepth=1 --time_based --end_fsync=1"
 
-default_fio_string="--name=bench.sh --ioengine=sync --direct=1 --fdatasync=1 --rw=write --gtod_reduce=1 --size=1g --numjobs=1 --iodepth=1 --time_based --end_fsync=1"
+default_fio_string="--name=bench.sh --ioengine=sync --direct=1 --fdatasync=1 --rw=write --gtod_reduce=1 --size=1g --numjobs=1 --iodepth=1 --time_based --end_fsync=1 --runtime=$run_time"
 
 # Works on tmpfs
 # fio --runtime=10 --name=tmpfs --ioengine=posixaio --fdatasync=1 --rw=write --gtod_reduce=1 --size=1g --numjobs=1 --iodepth=1 --time_based --end_fsync=1 --filename="$1"
